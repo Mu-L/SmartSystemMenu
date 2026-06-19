@@ -615,6 +615,7 @@ namespace SmartSystemMenu.Forms
             settings.Sizer.SizerType = (WindowSizerType)cmbSizer.SelectedIndex;
             settings.Sizer.ResizableByDefault = _settings.Sizer.ResizableByDefault;
             settings.EnableHighDPI = chkEnableHighDPI.Checked;
+            settings.LowLevelHooksTimeout = _settings.LowLevelHooksTimeout;
             settings.LanguageName = cmbLanguage.SelectedValue == null ? "" : cmbLanguage.SelectedValue.ToString();
 
             if (txtNextHotkeys.Tag is KeyboardShortcut nextShortcut)

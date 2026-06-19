@@ -8,6 +8,7 @@ using System.Drawing.Imaging;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Diagnostics;
+using Microsoft.Win32;
 using SmartSystemMenu.Forms;
 using SmartSystemMenu.Utils;
 using SmartSystemMenu.Native;
@@ -118,6 +119,14 @@ namespace SmartSystemMenu
             if (!createNew)
             {
                 return;
+            }
+
+            using var key = Registry.CurrentUser.OpenSubKey("Control Panel\\Desktop\\", false);
+            var lowLevelHooksTimeoutString = key?.GetValue(nameof(settings.LowLevelHooksTimeout))?.ToString();
+            var lowLevelHooksTimeoutValue = int.TryParse(lowLevelHooksTimeoutString, out var value) ? value : 0;
+            if (lowLevelHooksTimeoutValue > 0)
+            {
+                settings.LowLevelHooksTimeout = lowLevelHooksTimeoutValue;
             }
 
             Application.EnableVisualStyles();

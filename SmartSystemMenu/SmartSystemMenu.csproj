@@ -147,8 +147,8 @@
       <DependentUpon>ApplicationSettingsForm.cs</DependentUpon>
     </Compile>
     <Compile Include="HotKeys\MouseHook.cs" />
-    <Compile Include="HotKeys\HotKeyHook.cs" />
-    <Compile Include="HotKeys\HotKeyEventArgs.cs" />
+    <Compile Include="HotKeys\KeyboardHook.cs" />
+    <Compile Include="HotKeys\KeyboardEventArgs.cs" />
     <Compile Include="HotKeys\VirtualKey.cs" />
     <Compile Include="HotKeys\MouseButton.cs" />
     <Compile Include="HotKeys\VirtualKeyModifier.cs" />

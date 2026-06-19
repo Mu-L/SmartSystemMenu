@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Diagnostics;
 using SmartSystemMenu.Native.Structs;
 using SmartSystemMenu.Settings;
 using SmartSystemMenu.Extensions;
@@ -10,23 +11,30 @@ using static SmartSystemMenu.Native.Constants;
 
 namespace SmartSystemMenu.HotKeys
 {
-    class HotKeyHook : IDisposable
+    class KeyboardHook : IDisposable
     {
+        private readonly string _moduleName;
+        private static KeyboardHookProc _hookProc;
+        private IntPtr _moduleHandle;
         private IntPtr _hookHandle;
-        private KeyboardHookProc _hookProc;
+
+        public event EventHandler<KeyboardEventArgs> MenuItemHooked;
+        public event EventHandler<KeyboardEventArgs> MoveToHooked;
+
         public ApplicationSettings Settings { get; set; }
 
-        public event EventHandler<HotKeyEventArgs> MenuItemHooked;
-        public event EventHandler<HotKeyEventArgs> MoveToHooked;
-
-        public bool Start(ApplicationSettings settings, string moduleName)
+        public KeyboardHook(ApplicationSettings settings, string moduleName)
         {
             Settings = settings;
+            _moduleName = moduleName;
             _hookProc = HookProc;
-            var moduleHandle = GetModuleHandle(moduleName);
-            _hookHandle = SetWindowsHookEx(WH_KEYBOARD_LL, _hookProc, moduleHandle, 0);
-            var hookStarted = _hookHandle != IntPtr.Zero;
-            return hookStarted;
+        }
+
+        public bool Start()
+        {
+            _moduleHandle = GetModuleHandle(_moduleName);
+            InitializeHook();
+            return _hookHandle != IntPtr.Zero;
         }
 
         public bool Stop()
@@ -35,8 +43,7 @@ namespace SmartSystemMenu.HotKeys
             {
                 return true;
             }
-            var hookStoped = UnhookWindowsHookEx(_hookHandle);
-            return hookStoped;
+            return UnhookWindowsHookEx(_hookHandle);
         }
 
         public void Dispose()
@@ -55,15 +62,17 @@ namespace SmartSystemMenu.HotKeys
             Stop();
         }
 
-        ~HotKeyHook()
+        ~KeyboardHook()
         {
             Dispose(false);
         }
 
-        private int HookProc(int code, IntPtr wParam, ref KeyboardLLHookStruct lParam)
+        private int HookProc(int nCode, IntPtr wParam, ref KeyboardLLHookStruct lParam)
         {
-            if (code == HC_ACTION)
+            if (nCode >= 0)
             {
+                var stopWatch = Stopwatch.StartNew();
+
                 if (wParam.ToInt32() == WM_KEYDOWN || wParam.ToInt32() == WM_SYSKEYDOWN)
                 {
                     if ((int)Settings.NextMonitor.Key3 == lParam.vkCode)
@@ -88,11 +97,17 @@ namespace SmartSystemMenu.HotKeys
                             var handler = MoveToHooked;
                             if (handler != null)
                             {
-                                var eventArgs = new HotKeyEventArgs();
+                                var eventArgs = new KeyboardEventArgs();
                                 eventArgs.NextMonitor = true;
                                 handler.Invoke(this, eventArgs);
                                 if (eventArgs.Succeeded)
                                 {
+                                    stopWatch.Stop();
+                                    if (stopWatch.ElapsedMilliseconds > Settings.LowLevelHooksTimeout)
+                                    {
+                                        InitializeHook();
+                                    }
+
                                     return 1;
                                 }
                             }
@@ -121,11 +136,17 @@ namespace SmartSystemMenu.HotKeys
                             var handler = MoveToHooked;
                             if (handler != null)
                             {
-                                var eventArgs = new HotKeyEventArgs();
+                                var eventArgs = new KeyboardEventArgs();
                                 eventArgs.PreviousMonitor = true;
                                 handler.Invoke(this, eventArgs);
                                 if (eventArgs.Succeeded)
                                 {
+                                    stopWatch.Stop();
+                                    if (stopWatch.ElapsedMilliseconds > Settings.LowLevelHooksTimeout)
+                                    {
+                                        InitializeHook();
+                                    }
+
                                     return 1;
                                 }
                             }
@@ -160,10 +181,16 @@ namespace SmartSystemMenu.HotKeys
                             if (handler != null)
                             {
                                 var menuItemId = MenuItemId.GetId(item.Name);
-                                var eventArgs = new HotKeyEventArgs(menuItemId);
+                                var eventArgs = new KeyboardEventArgs(menuItemId);
                                 handler.Invoke(this, eventArgs);
                                 if (eventArgs.Succeeded)
                                 {
+                                    stopWatch.Stop();
+                                    if (stopWatch.ElapsedMilliseconds > Settings.LowLevelHooksTimeout)
+                                    {
+                                        InitializeHook();
+                                    }
+
                                     return 1;
                                 }
                             }
@@ -197,19 +224,41 @@ namespace SmartSystemMenu.HotKeys
                             var handler = MenuItemHooked;
                             if (handler != null)
                             {
-                                var eventArgs = new HotKeyEventArgs(item.Id);
+                                var eventArgs = new KeyboardEventArgs(item.Id);
                                 handler.Invoke(this, eventArgs);
                                 if (eventArgs.Succeeded)
                                 {
+                                    stopWatch.Stop();
+                                    if (stopWatch.ElapsedMilliseconds > Settings.LowLevelHooksTimeout)
+                                    {
+                                        InitializeHook();
+                                    }
+
                                     return 1;
                                 }
                             }
                         }
                     }
                 }
+
+                stopWatch.Stop();
+                if (stopWatch.ElapsedMilliseconds > Settings.LowLevelHooksTimeout)
+                {
+                    InitializeHook();
+                }
             }
 
-            return CallNextHookEx(_hookHandle, code, wParam, ref lParam);
+            return CallNextHookEx(_hookHandle, nCode, wParam, ref lParam);
+        }
+
+        private void InitializeHook()
+        {
+            if (_hookHandle != IntPtr.Zero)
+            {
+                UnhookWindowsHookEx(_hookHandle);
+                _hookHandle = IntPtr.Zero;
+            }
+            _hookHandle = SetWindowsHookEx(WH_KEYBOARD_LL, _hookProc, _moduleHandle, 0);
         }
     }
 }

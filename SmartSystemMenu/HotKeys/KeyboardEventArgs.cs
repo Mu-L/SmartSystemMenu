@@ -2,7 +2,7 @@
 
 namespace SmartSystemMenu.HotKeys
 {
-    class HotKeyEventArgs : EventArgs
+    class KeyboardEventArgs : EventArgs
     {
         public int MenuItemId { get; }
 
@@ -12,11 +12,11 @@ namespace SmartSystemMenu.HotKeys
 
         public bool Succeeded { get; set; }
 
-        public HotKeyEventArgs()
+        public KeyboardEventArgs()
         {
         }
 
-        public HotKeyEventArgs(int menuItemId)
+        public KeyboardEventArgs(int menuItemId)
         {
             MenuItemId = menuItemId;
         }

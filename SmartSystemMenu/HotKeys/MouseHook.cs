@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
+using SmartSystemMenu.Settings;
 using SmartSystemMenu.Native.Structs;
 using static SmartSystemMenu.Native.Kernel32;
 using static SmartSystemMenu.Native.User32;
@@ -9,24 +11,27 @@ namespace SmartSystemMenu.HotKeys
 {
     class MouseHook : IDisposable
     {
+        private readonly string _moduleName;
+        private static MouseHookProc _hookProc;
+        private IntPtr _moduleHandle;
         private IntPtr _hookHandle;
-        private MouseHookProc _hookProc;
-        private VirtualKeyModifier _key1;
-        private VirtualKeyModifier _key2;
-        private MouseButton _mouseButton;
 
-        public event EventHandler<EventArgs<Point>> Hooked;
+        public event EventHandler<EventArgs<Point>> CloserHooked;
 
-        public bool Start(string moduleName, VirtualKeyModifier key1, VirtualKeyModifier key2, MouseButton mouseButton)
+        public ApplicationSettings Settings { get; set; }
+
+        public MouseHook(ApplicationSettings settings, string moduleName)
         {
-            _key1 = key1;
-            _key2 = key2;
-            _mouseButton = mouseButton;
+            Settings = settings;
+            _moduleName = moduleName;
             _hookProc = HookProc;
-            var moduleHandle = GetModuleHandle(moduleName);
-            _hookHandle = SetWindowsHookEx(WH_MOUSE_LL, _hookProc, moduleHandle, 0);
-            var hookStarted = _hookHandle != IntPtr.Zero;
-            return hookStarted;
+        }
+
+        public bool Start()
+        {
+            _moduleHandle = GetModuleHandle(_moduleName);
+            InitializeHook();
+            return _hookHandle != IntPtr.Zero;
         }
 
         public bool Stop()
@@ -60,31 +65,33 @@ namespace SmartSystemMenu.HotKeys
             Dispose(false);
         }
 
-        private int HookProc(int code, int wParam, IntPtr lParam)
+        private int HookProc(int nCode, int wParam, IntPtr lParam)
         {
-            if (code == HC_ACTION)
+            if (nCode >= 0)
             {
-                if (_mouseButton != MouseButton.None && 
+                var stopWatch = Stopwatch.StartNew();
+
+                if (Settings.Closer.MouseButton != MouseButton.None && 
                     (wParam == WM_LBUTTONDOWN || wParam == WM_RBUTTONDOWN || wParam == WM_MBUTTONDOWN || wParam == WM_LBUTTONUP || wParam == WM_RBUTTONUP || wParam == WM_MBUTTONUP))
                 {
                     var key1 = true;
                     var key2 = true;
 
-                    if (_key1 != VirtualKeyModifier.None)
+                    if (Settings.Closer.Key1 != VirtualKeyModifier.None)
                     {
-                        var key1State = GetAsyncKeyState((int)_key1) & 0x8000;
+                        var key1State = GetAsyncKeyState((int)Settings.Closer.Key1) & 0x8000;
                         key1 = Convert.ToBoolean(key1State);
                     }
 
-                    if (_key2 != VirtualKeyModifier.None)
+                    if (Settings.Closer.Key2 != VirtualKeyModifier.None)
                     {
-                        var key2State = GetAsyncKeyState((int)_key2) & 0x8000;
+                        var key2State = GetAsyncKeyState((int)Settings.Closer.Key2) & 0x8000;
                         key2 = Convert.ToBoolean(key2State);
                     }
 
-                    if (key1 && key2 && ((_mouseButton == MouseButton.Left && wParam == WM_LBUTTONDOWN) || (_mouseButton == MouseButton.Right && wParam == WM_RBUTTONDOWN) || (_mouseButton == MouseButton.Middle && wParam == WM_MBUTTONDOWN)))
+                    if (key1 && key2 && ((Settings.Closer.MouseButton == MouseButton.Left && wParam == WM_LBUTTONDOWN) || (Settings.Closer.MouseButton == MouseButton.Right && wParam == WM_RBUTTONDOWN) || (Settings.Closer.MouseButton == MouseButton.Middle && wParam == WM_MBUTTONDOWN)))
                     {
-                        var handler = Hooked;
+                        var handler = CloserHooked;
                         if (handler != null)
                         {
                             var mouseHookStruct = (MouseLLHookStruct)Marshal.PtrToStructure(lParam, typeof(MouseLLHookStruct));
@@ -94,14 +101,24 @@ namespace SmartSystemMenu.HotKeys
                         }
                     }
 
-                    if (key1 && key2 && ((_mouseButton == MouseButton.Left && wParam == WM_LBUTTONUP) || (_mouseButton == MouseButton.Right && wParam == WM_RBUTTONUP) || (_mouseButton == MouseButton.Middle && wParam == WM_MBUTTONUP)))
+                    if (key1 && key2 && ((Settings.Closer.MouseButton == MouseButton.Left && wParam == WM_LBUTTONUP) || (Settings.Closer.MouseButton == MouseButton.Right && wParam == WM_RBUTTONUP) || (Settings.Closer.MouseButton == MouseButton.Middle && wParam == WM_MBUTTONUP)))
                     {
                         return 1;
                     }
                 }
             }
 
-            return CallNextHookEx(_hookHandle, code, wParam, lParam);
+            return CallNextHookEx(_hookHandle, nCode, wParam, lParam);
+        }
+
+        private void InitializeHook()
+        {
+            if (_hookHandle != IntPtr.Zero)
+            {
+                UnhookWindowsHookEx(_hookHandle);
+                _hookHandle = IntPtr.Zero;
+            }
+            _hookHandle = SetWindowsHookEx(WH_MOUSE_LL, _hookProc, _moduleHandle, 0);
         }
     }
 }

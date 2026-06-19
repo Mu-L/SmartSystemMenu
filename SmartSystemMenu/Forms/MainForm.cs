@@ -27,7 +27,7 @@ namespace SmartSystemMenu.Forms
         private GetMsgHook _getMsgHook;
         private ShellHook _shellHook;
         private CBTHook _cbtHook;
-        private HotKeyHook _hotKeyHook;
+        private KeyboardHook _keyboardHook;
         private AboutForm _aboutForm;
         private ApplicationSettingsForm _settingsForm;
         private readonly List<DimForm> _dimForms;
@@ -39,7 +39,7 @@ namespace SmartSystemMenu.Forms
 
 #if WIN32
         private SystemTrayMenu _systemTrayMenu;
-        private MouseHook _hotKeyMouseHook;
+        private MouseHook _mouseHook;
         private Process _64BitProcess;
 #endif
 
@@ -98,11 +98,11 @@ namespace SmartSystemMenu.Forms
                 _systemTrayMenu.CheckMenuItemAutoStart(AutoStarter.IsAutoStartByRegisterEnabled(AssemblyUtils.AssemblyProductName, AssemblyUtils.AssemblyLocation));
             }
 
-            _hotKeyMouseHook = new MouseHook();
-            _hotKeyMouseHook.Hooked += HotKeyMouseHooked;
+            _mouseHook = new MouseHook(_settings, mainModule.ModuleName);
+            _mouseHook.CloserHooked += CloserMouseHooked;
             if (_settings.Closer.MouseButton != MouseButton.None)
             {
-                _hotKeyMouseHook.Start(mainModule.ModuleName, _settings.Closer.Key1, _settings.Closer.Key2, _settings.Closer.MouseButton);
+                _mouseHook.Start();
             }
 #endif
 
@@ -171,15 +171,15 @@ namespace SmartSystemMenu.Forms
             _cbtHook.Activate += WindowActivate;
             _cbtHook.Start();
 
-            _hotKeyHook = new HotKeyHook();
-            _hotKeyHook.MenuItemHooked += HotKeyHooked;
-            _hotKeyHook.MoveToHooked += MoveToHooked;
-            _hotKeyHook.Start(_settings, mainModule.ModuleName);
+            _keyboardHook = new KeyboardHook(_settings, mainModule.ModuleName);
+            _keyboardHook.MenuItemHooked += MenuItemHooked;
+            _keyboardHook.MoveToHooked += MoveToHooked;
+            _keyboardHook.Start();
 
             Hide();
         }
 
-        private void HotKeyMouseHooked(object sender, EventArgs<SmartSystemMenu.Native.Structs.Point> e)
+        private void CloserMouseHooked(object sender, EventArgs<SmartSystemMenu.Native.Structs.Point> e)
         {
             if (_settings.Closer.Type == WindowCloserType.CloseForegroundWindow)
             {
@@ -226,7 +226,7 @@ namespace SmartSystemMenu.Forms
 
 #if WIN32
             _systemTrayMenu?.Dispose();
-            _hotKeyHook?.Dispose();
+            _keyboardHook?.Dispose();
 
             if (Environment.Is64BitOperatingSystem && _64BitProcess != null && !_64BitProcess.HasExited)
             {
@@ -1174,7 +1174,7 @@ namespace SmartSystemMenu.Forms
             }
         }
 
-        private void HotKeyHooked(object sender, HotKeyEventArgs e)
+        private void MenuItemHooked(object sender, KeyboardEventArgs e)
         {
             var handle = GetForegroundWindow();
             var systemMenuHandle = GetSystemMenu(handle, false);
@@ -1201,7 +1201,7 @@ namespace SmartSystemMenu.Forms
             }
         }
 
-        private void MoveToHooked(object sender, HotKeyEventArgs e)
+        private void MoveToHooked(object sender, KeyboardEventArgs e)
         {
             var monitorHandles = SystemUtils.GetMonitors();
             if (monitorHandles.Count < 2)

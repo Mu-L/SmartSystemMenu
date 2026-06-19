@@ -5,6 +5,8 @@ namespace SmartSystemMenu.Settings
 {
     public class ApplicationSettings : ICloneable
     {
+        public const int DefaultLowLevelHooksTimeout = 300;
+
         public IList<ExcludedProcessItem> ExcludedProcessItems { get; set; }
 
         public IList<string> InitEventProcessNames { get; set; }
@@ -24,6 +26,8 @@ namespace SmartSystemMenu.Settings
         public bool ShowSystemTrayIcon { get; set; }
 
         public bool EnableHighDPI { get; set; }
+
+        public int LowLevelHooksTimeout { get; set; }
 
         public string LanguageName { get; set; }
 
@@ -46,7 +50,8 @@ namespace SmartSystemMenu.Settings
             SaveSelectedItems = new SaveSelectedItemsSettings();
             ShowSystemTrayIcon = true;
             EnableHighDPI = false;
-            LanguageName = "";
+            LowLevelHooksTimeout = DefaultLowLevelHooksTimeout;
+            LanguageName = string.Empty;
             Language = new LanguageSettings();
             NextMonitor = new KeyboardShortcut();
             PreviousMonitor = new KeyboardShortcut();
