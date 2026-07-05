@@ -2182,7 +2182,7 @@
       <item name="process_btn_apply" value="Ok" />
       <item name="process_btn_cancel" value="Cancelar" />
       <item name="process_browse_file_filter" value="Executáveis (*.exe)|*.exe|Todos os programas (*.*)|*.*" />
-      <item name="start_program_form" value="Executar programa"	 />
+      <item name="start_program_form" value="Executar programa" />
       <item name="start_program_lbl_title" value="Nome:" />
       <item name="start_program_lbl_file_name" value="Nome do arquivo:" />
       <item name="start_program_lbl_arguments" value="Parâmetros:" />
@@ -3993,7 +3993,7 @@
       <item name="change_title_btn_cancel" value="ரத்துசெய்" />
       <item name="change_title_form" value="தலைப்பை மாற்று" />
     </ta>
-        <vi>
+    <vi>
       <item name="separator" value="Dải phân cách" />
       <item name="information" value="Thông tin" />
       <item name="hide" value="Ẩn" />

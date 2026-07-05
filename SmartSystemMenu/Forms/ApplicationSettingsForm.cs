@@ -129,6 +129,7 @@ namespace SmartSystemMenu.Forms
                 new { Text = "Русский", Value = "ru" },
                 new { Text = "Српски", Value = "sr" },
                 new { Text = "Slovenščina", Value = "sl" },
+                new { Text = "Tiếng Việt", Value = "vi" },
                 new { Text = "עִברִית", Value = "he" },
                 new { Text = "தமிழ்", Value = "ta" },
                 new { Text = "简体中文", Value = "zh_cn" },
